@@ -2,7 +2,7 @@
 
 Flutter app that detects organic food waste in a photo **on the device** with a custom-trained **YOLO11m** model, then gives composting and animal-feed advice with **Google Gemini**. Images can come from an **ESP32-CAM** over Wi-Fi or from the phone's camera and gallery.
 
-Built as a 3-person IoT course project at Dokuz Eylül University (Computer Engineering).
+Built by a 3-person team at Dokuz Eylül University (Computer Engineering).
 
 <table>
   <tr>
@@ -48,6 +48,23 @@ The detector is a **YOLO11m** model (20M parameters) trained with Ultralytics on
 
 The model went through 13 training iterations, starting from YOLOv8n on an 8-class dataset and ending with YOLO11m on the current 12-class dataset, with early stopping (patience 10). It was exported to TFLite for on-device use.
 
+The full training, evaluation and export pipeline is in [`training/train_yolo11.ipynb`](training/train_yolo11.ipynb).
+
+<table>
+  <tr>
+    <td align="center"><img src="training/results/pr_curve.png" width="420" alt="Precision-recall curve" /><br /><sub><b>Precision-recall curve per class</b></sub></td>
+    <td align="center"><img src="training/results/confusion_matrix_normalized.png" width="420" alt="Normalized confusion matrix" /><br /><sub><b>Normalized confusion matrix</b></sub></td>
+  </tr>
+</table>
+
+<details>
+<summary>Training curves (loss, precision, recall, mAP per epoch)</summary>
+
+![Training curves](training/results/results.png)
+</details>
+
+The weakest class is **leafy greens** (mAP@50 0.66): loose leaves have no fixed shape and are often confused with the background. The strongest classes are onion, egg and pepper (mAP@50 0.91–0.92).
+
 ## My Role
 
 - Co-trained the YOLO11 model: dataset iterations, training runs and evaluation on Colab
@@ -78,6 +95,9 @@ lib/
 assets/
 ├── models/best.tflite   # YOLO11m TFLite export
 └── data/waste_guide.json  # Offline advice
+training/
+├── train_yolo11.ipynb   # Colab notebook: dataset, training, evaluation, TFLite export, Gemini advice
+└── results/             # Training plots of the final run
 ```
 
 ## Getting Started
@@ -101,4 +121,4 @@ flutter run
 
 ---
 
-Developed as an IoT course project at Dokuz Eylül University, Department of Computer Engineering.
+Developed at Dokuz Eylül University, Department of Computer Engineering.
