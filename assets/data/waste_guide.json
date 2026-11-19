@@ -1,0 +1,112 @@
+{
+  "apple": {
+    "wasteType": "Meyve Kabuğu",
+    "compostable": true,
+    "tips": [
+      "Küçük parçalara bölün",
+      "Diğer kahverengi atıklarla karıştırın",
+      "Aşırı miktarda kullanmayın"
+    ],
+    "animals": ["Tavuk", "Keçi", "Domuz", "At"],
+    "additionalInfo": "Elma kabukları kompost için mükemmeldir ve hızlı ayrışır."
+  },
+  "banana": {
+    "wasteType": "Meyve Kabuğu",
+    "compostable": true,
+    "tips": [
+      "Kabukları küçük parçalara kesin",
+      "Potasyum açısından zengindir",
+      "Hızlı ayrışır"
+    ],
+    "animals": ["Tavuk", "Keçi", "Domuz"],
+    "additionalInfo": "Muz kabukları kompost için harika potasyum kaynağıdır."
+  },
+  "orange": {
+    "wasteType": "Narenciye Kabuğu",
+    "compostable": true,
+    "tips": [
+      "Az miktarda kullanın",
+      "Küçük parçalara bölün",
+      "Asitli olduğu için dikkatli kullanın"
+    ],
+    "animals": ["Tavuk"],
+    "additionalInfo": "Narenciye kabukları asitlidir, dengeli kullanılmalıdır."
+  },
+  "carrot": {
+    "wasteType": "Sebze Artığı",
+    "compostable": true,
+    "tips": [
+      "Uç kısımları ve kabukları kullanın",
+      "Hızlı ayrışır",
+      "Diğer sebze atıklarıyla karıştırın"
+    ],
+    "animals": ["Tavuk", "Keçi", "Tavşan", "At"],
+    "additionalInfo": "Havuç artıkları kompost için mükemmeldir."
+  },
+  "potato": {
+    "wasteType": "Sebze Artığı",
+    "compostable": true,
+    "tips": [
+      "Sadece kabukları kullanın",
+      "Filizlenmiş patates kullanmayın",
+      "Küçük parçalara bölün"
+    ],
+    "animals": ["Domuz", "Tavuk"],
+    "additionalInfo": "Patates kabukları kompost edilebilir ancak filizlenmiş olanlar kullanılmamalıdır."
+  },
+  "tomato": {
+    "wasteType": "Sebze Artığı",
+    "compostable": true,
+    "tips": [
+      "Çürümüş kısımları kullanın",
+      "Tohumlar çimlenmeyecek şekilde işleyin",
+      "Diğer atıklarla karıştırın"
+    ],
+    "animals": ["Tavuk", "Keçi"],
+    "additionalInfo": "Domates artıkları kompost için uygundur."
+  },
+  "bread": {
+    "wasteType": "Ekmek Ürünü",
+    "compostable": true,
+    "tips": [
+      "Az miktarda kullanın",
+      "Küflenmiş olanları tercih edin",
+      "Hayvanlara çekici olabilir, dikkatli olun"
+    ],
+    "animals": ["Tavuk", "Keçi", "Domuz"],
+    "additionalInfo": "Ekmek kompost edilebilir ancak haşereleri çekebilir."
+  },
+  "eggshell": {
+    "wasteType": "Hayvansal Atık",
+    "compostable": true,
+    "tips": [
+      "Küçük parçalara ezin",
+      "Kalsiyum kaynağıdır",
+      "Yavaş ayrışır"
+    ],
+    "animals": ["Tavuk"],
+    "additionalInfo": "Yumurta kabukları mükemmel kalsiyum kaynağıdır."
+  },
+  "coffee_grounds": {
+    "wasteType": "Kahve Telvesi",
+    "compostable": true,
+    "tips": [
+      "Azot açısından zengindir",
+      "Filtre kağıdıyla birlikte kullanın",
+      "Solucanlar için idealdir"
+    ],
+    "animals": [],
+    "additionalInfo": "Kahve telvesi kompost için harika azot kaynağıdır."
+  },
+  "tea_bag": {
+    "wasteType": "Çay Poşeti",
+    "compostable": true,
+    "tips": [
+      "Metal zımbaları çıkarın",
+      "Poşet içeriğini kullanın",
+      "Hızlı ayrışır"
+    ],
+    "animals": [],
+    "additionalInfo": "Çay poşetleri kompost için uygundur, metal parçaları çıkarın."
+  }
+}
