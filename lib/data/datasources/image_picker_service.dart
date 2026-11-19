@@ -10,11 +10,19 @@ class ImagePickerService {
 
   ImagePickerService(this._picker);
 
-  /// Picks an image from camera
-  Future<Uint8List> pickFromCamera() async {
+  /// Picks an image from camera. Returns null if the user closes the camera
+  /// without taking a photo.
+  Future<Uint8List?> pickFromCamera() async {
     try {
-      // Request camera permission
+      // Request camera permission (shows the system dialog when needed)
       final cameraStatus = await Permission.camera.request();
+      if (cameraStatus.isPermanentlyDenied) {
+        // Android no longer shows the dialog after "Don't ask again";
+        // send the user to the app settings instead.
+        await openAppSettings();
+        throw const CameraFailure(
+            'Kamera izni kapalı. Ayarlar > İzinler bölümünden kamerayı açın.');
+      }
       if (!cameraStatus.isGranted) {
         throw const CameraFailure('Kamera izni verilmedi');
       }
@@ -27,9 +35,8 @@ class ImagePickerService {
         maxHeight: 1920,
       );
 
-      if (image == null) {
-        throw const CameraFailure('Fotoğraf çekimi iptal edildi');
-      }
+      // User closed the camera without taking a photo: not an error.
+      if (image == null) return null;
 
       // Read image bytes
       final bytes = await image.readAsBytes();
@@ -40,8 +47,9 @@ class ImagePickerService {
     }
   }
 
-  /// Picks an image from gallery
-  Future<Uint8List> pickFromGallery() async {
+  /// Picks an image from gallery. Returns null if the user closes the gallery
+  /// without choosing an image.
+  Future<Uint8List?> pickFromGallery() async {
     try {
       // Request storage permission (for older Android versions)
       if (await Permission.storage.isDenied) {
@@ -56,9 +64,8 @@ class ImagePickerService {
         maxHeight: 1920,
       );
 
-      if (image == null) {
-        throw const CameraFailure('Resim seçimi iptal edildi');
-      }
+      // User closed the gallery without choosing an image: not an error.
+      if (image == null) return null;
 
       // Read image bytes
       final bytes = await image.readAsBytes();

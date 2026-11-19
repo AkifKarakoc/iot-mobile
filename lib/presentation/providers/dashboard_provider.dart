@@ -4,6 +4,7 @@ import '../../domain/entities/waste_analysis.dart';
 import '../../domain/usecases/analyze_waste_usecase.dart';
 import '../../data/datasources/connectivity_service.dart';
 import '../../data/datasources/esp32_camera_service.dart';
+import '../../core/errors/failures.dart';
 import '../../data/datasources/image_picker_service.dart';
 import '../../domain/repositories/waste_repository.dart';
 
@@ -104,11 +105,18 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
 
   /// Analyzes image from phone camera
   Future<void> analyzeFromCamera() async {
-    state = AnalysisState.loading();
-
     try {
       // Pick image from camera
       final imageBytes = await _imagePickerService.pickFromCamera();
+
+      // Cancelled by the user: stay on the dashboard without any message.
+      if (imageBytes == null) {
+        state = AnalysisState.idle();
+        return;
+      }
+
+      // Show the loading state only once there is an image to analyze
+      state = AnalysisState.loading();
 
       // Analyze the image
       final result = await _repository.analyzeLocalImage(imageBytes);
@@ -117,6 +125,8 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
         (failure) => state = AnalysisState.error(failure.message),
         (analysis) => state = AnalysisState.success(analysis),
       );
+    } on Failure catch (failure) {
+      state = AnalysisState.error(failure.message);
     } catch (e) {
       state = AnalysisState.error('Kamera hatası: $e');
     }
@@ -124,11 +134,18 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
 
   /// Analyzes image from gallery
   Future<void> analyzeFromGallery() async {
-    state = AnalysisState.loading();
-
     try {
       // Pick image from gallery
       final imageBytes = await _imagePickerService.pickFromGallery();
+
+      // Cancelled by the user: stay on the dashboard without any message.
+      if (imageBytes == null) {
+        state = AnalysisState.idle();
+        return;
+      }
+
+      // Show the loading state only once there is an image to analyze
+      state = AnalysisState.loading();
 
       // Analyze the image
       final result = await _repository.analyzeLocalImage(imageBytes);
@@ -137,6 +154,8 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
         (failure) => state = AnalysisState.error(failure.message),
         (analysis) => state = AnalysisState.success(analysis),
       );
+    } on Failure catch (failure) {
+      state = AnalysisState.error(failure.message);
     } catch (e) {
       state = AnalysisState.error('Galeri hatası: $e');
     }

@@ -16,7 +16,7 @@ class AppConstants {
   static const int cameraTimeout = 5000; // 5 seconds
 
   // AI Model Configuration
-  static const String modelPath = 'assets/models/yolov11.tflite';
+  static const String modelPath = 'assets/models/best.tflite';
   static const int inputImageSize = 640; // YOLOv11 default input size
   static const double confidenceThreshold = 0.5;
   static const double iouThreshold = 0.45;

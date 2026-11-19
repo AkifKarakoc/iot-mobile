@@ -65,14 +65,35 @@ class ObjectDetectionService {
     }
   }
 
-  /// Preprocesses image for YOLOv11 input
+  // Letterbox geometry of the last preprocessed image, used to map boxes
+  // back to the original image.
+  double _scale = 1.0;
+  int _padX = 0;
+  int _padY = 0;
+  int _scaledWidth = AppConstants.inputImageSize;
+  int _scaledHeight = AppConstants.inputImageSize;
+
+  /// Preprocesses image for YOLOv11 input.
+  ///
+  /// Uses letterboxing like Ultralytics training: the image is scaled to fit
+  /// 640x640 without changing its aspect ratio and padded with gray (114).
+  /// Stretching wide photos instead distorts objects and hurts detection.
   List<List<List<List<double>>>> _preprocessImage(img.Image image) {
-    // Resize to model input size
-    final resized = img.copyResize(
+    final size = AppConstants.inputImageSize;
+    _scale = size / (image.width > image.height ? image.width : image.height);
+    _scaledWidth = (image.width * _scale).round();
+    _scaledHeight = (image.height * _scale).round();
+    _padX = (size - _scaledWidth) ~/ 2;
+    _padY = (size - _scaledHeight) ~/ 2;
+
+    final scaled = img.copyResize(
       image,
-      width: AppConstants.inputImageSize,
-      height: AppConstants.inputImageSize,
+      width: _scaledWidth,
+      height: _scaledHeight,
     );
+    final resized = img.Image(width: size, height: size);
+    img.fill(resized, color: img.ColorRgb8(114, 114, 114));
+    img.compositeImage(resized, scaled, dstX: _padX, dstY: _padY);
 
     // Normalize to [0, 1]
     final input = List.generate(
@@ -96,12 +117,20 @@ class ObjectDetectionService {
     return input;
   }
 
-  /// Post-processes YOLOv11 output
+  /// Post-processes YOLOv11 output.
+  ///
+  /// The bundled model was exported with NMS built in, so its output is
+  /// [1, 300, 6]: each row is (x1, y1, x2, y2, confidence, classId).
+  /// Raw exports without NMS ([1, 4 + numClasses, 8400]) are still supported.
   List<DetectionResult> _postprocessOutput(
     List<List<List<double>>> output,
     int originalWidth,
     int originalHeight,
   ) {
+    if (output[0].isNotEmpty && output[0][0].length == 6) {
+      return _postprocessNmsOutput(output);
+    }
+
     final detections = <DetectionResult>[];
     final numDetections = output[0][0].length;
 
@@ -144,6 +173,53 @@ class ObjectDetectionService {
     final filteredDetections = _applyNMS(detections);
 
     return filteredDetections;
+  }
+
+  /// Parses an NMS-exported output ([1, N, 6] rows of x1, y1, x2, y2, conf, cls).
+  /// Boxes are converted to normalized center/width/height to match
+  /// [DetectionResult].
+  List<DetectionResult> _postprocessNmsOutput(List<List<List<double>>> output) {
+    final detections = <DetectionResult>[];
+    final inputSize = AppConstants.inputImageSize.toDouble();
+
+    for (final row in output[0]) {
+      final confidence = row[4];
+      if (confidence < AppConstants.confidenceThreshold) continue;
+
+      var x1 = row[0], y1 = row[1], x2 = row[2], y2 = row[3];
+      // Some exports return pixel coordinates; normalize them to 0..1.
+      if (x2 > 1.5 || y2 > 1.5) {
+        x1 /= inputSize;
+        y1 /= inputSize;
+        x2 /= inputSize;
+        y2 /= inputSize;
+      }
+
+      // Undo the letterbox: from 640x640 canvas to the original image (0..1).
+      double toX(double v) =>
+          ((v * inputSize - _padX) / _scaledWidth).clamp(0.0, 1.0);
+      double toY(double v) =>
+          ((v * inputSize - _padY) / _scaledHeight).clamp(0.0, 1.0);
+      x1 = toX(x1);
+      x2 = toX(x2);
+      y1 = toY(y1);
+      y2 = toY(y2);
+
+      final classId = row[5].round();
+      detections.add(DetectionResult(
+        classId: classId,
+        className: AppConstants.wasteClassNames[classId] ?? 'unknown',
+        confidence: confidence,
+        x: (x1 + x2) / 2,
+        y: (y1 + y2) / 2,
+        width: x2 - x1,
+        height: y2 - y1,
+      ));
+    }
+
+    // The model already applied NMS; results are sorted by confidence.
+    detections.sort((a, b) => b.confidence.compareTo(a.confidence));
+    return detections;
   }
 
   /// Applies Non-Maximum Suppression to remove overlapping boxes

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../domain/entities/compost_advice.dart';
+import '../../domain/entities/detection_result.dart';
 import '../../domain/entities/waste_analysis.dart';
 import 'biobot_chat_widget.dart';
 
@@ -129,6 +131,10 @@ class ResultDialog extends StatelessWidget {
                           ],
                         ),
                       ),
+                      if (analysis.detections.length > 1) ...[
+                        const SizedBox(height: 16),
+                        _buildAllDetections(analysis.detections),
+                      ],
                       const SizedBox(height: 24),
                     ],
 
@@ -198,6 +204,60 @@ class ResultDialog extends StatelessWidget {
     );
   }
 
+  /// Lists every detected waste type with its count and best confidence,
+  /// e.g. "BANANA ×5 · %94", most frequent first.
+  Widget _buildAllDetections(List<DetectionResult> detections) {
+    final groups = <String, List<DetectionResult>>{};
+    for (final d in detections) {
+      groups.putIfAbsent(d.className, () => []).add(d);
+    }
+    final entries = groups.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tüm Tespitler (${detections.length} nesne, ${entries.length} tür)',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: entries.map<Widget>((entry) {
+            final best = entry.value
+                .map((d) => d.confidence)
+                .reduce((a, b) => a > b ? a : b);
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111328),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF00D4AA).withValues(alpha: 0.6),
+                ),
+              ),
+              child: Text(
+                '${entry.key.toUpperCase()} ×${entry.value.length} · '
+                '%${(best * 100).toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Color(0xFF00D4AA),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
@@ -210,7 +270,9 @@ class ResultDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildAdviceCard(advice) {
+  // Typed parameter: an untyped `advice` is `dynamic`, which made
+  // `.map(...).toList()` return List<dynamic> and crash the Wrap's children.
+  Widget _buildAdviceCard(CompostAdvice advice) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
