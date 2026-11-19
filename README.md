@@ -1,238 +1,104 @@
-# BioCycle AI 🌱🤖
+# BioCycle AI — On-Device Organic Waste Detection with YOLO11
 
-**IoT ve Yapay Zeka Destekli Akıllı Atık Analizi ve Kompost Önerisi Uygulaması**
+Flutter app that detects organic food waste in a photo **on the device** with a custom-trained **YOLO11m** model, then gives composting and animal-feed advice with **Google Gemini**. Images can come from an **ESP32-CAM** over Wi-Fi or from the phone's camera and gallery.
 
-BioCycle AI, ESP32-CAM IoT cihazından alınan atık fotoğraflarını cihaz üzerinde (on-device) YOLOv11 modeliyle analiz eder ve kullanıcılara akıllı kompost önerileri sunar.
+Built as a 3-person IoT course project at Dokuz Eylül University (Computer Engineering).
 
-## 🎯 Özellikler
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/home.jpg" width="260" alt="Home screen" /><br /><sub><b>Home</b></sub></td>
+    <td align="center"><img src="docs/screenshots/result.jpg" width="260" alt="Detection result" /><br /><sub><b>Detection result</b></sub></td>
+  </tr>
+</table>
 
-### ✨ Temel Özellikler
-- **ESP32-CAM Entegrasyonu**: Gerçek zamanlı kamera akışı ve yüksek çözünürlüklü görüntü yakalama
-- **On-Device AI**: TFLite ile cihaz üzerinde YOLOv11 object detection
-- **Hibrit Zeka Sistemi**: 
-  - 🌐 **Online Mod**: Backend API'den güncel kompost önerileri + BioBot chat
-  - 📴 **Offline Mod**: Yerel JSON veritabanından temel öneriler
-- **Modern UI**: Minimalist, dark-theme tasarım
-- **Gerçek Zamanlı Durum İzleme**: Internet ve ESP32 bağlantı durumu göstergeleri
+## How It Works
 
-### 🏗️ Mimari
-- **Clean Architecture**: Domain, Data, Presentation katmanları
-- **State Management**: Riverpod
-- **Dependency Injection**: get_it + injectable
-- **Error Handling**: Kapsamlı hata yönetimi ve kullanıcı geri bildirimi
-
-## 📋 Gereksinimler
-
-### Yazılım Gereksinimleri
-- Flutter SDK: >=3.0.0
-- Dart SDK: >=3.0.0
-
-### Donanım Gereksinimleri
-- ESP32-CAM modülü
-- WiFi bağlantısı
-
-### AI Model
-- YOLOv11 TFLite modeli (.tflite formatında)
-- Model dosyası: `assets/models/yolov11.tflite`
-
-## 🚀 Kurulum
-
-### 1. Projeyi Klonlayın veya İndirin
-
-```bash
-cd "IOT Uygulama"
+```mermaid
+flowchart LR
+    CAM["ESP32-CAM<br/>(HTTP /capture)"] --> APP
+    PHONE["Phone camera<br/>or gallery"] --> APP
+    APP["Flutter app"] --> PRE["Letterbox to 640x640"]
+    PRE --> YOLO["YOLO11m (TFLite)<br/>on-device inference"]
+    YOLO --> RES["Detections:<br/>class, count, confidence"]
+    RES --> ADV{"Online?"}
+    ADV -->|Yes| GEM["Gemini:<br/>compost & feed advice"]
+    ADV -->|No| LOCAL["Local JSON guide"]
 ```
 
-### 2. Bağımlılıkları Yükleyin
+1. **Image input:** from the ESP32-CAM's `/capture` endpoint on the local network, or from the phone's camera or gallery.
+2. **Preprocessing:** the image is letterboxed to 640×640 (aspect ratio kept, gray padding), the same way the model was trained.
+3. **Detection:** YOLO11m runs on the phone with TensorFlow Lite. No server is needed.
+4. **Results:** every detected item is listed with its count and best confidence, e.g. `BANANA ×8 · %78`.
+5. **Advice:** with internet, Gemini acts as an agronomist/veterinarian and returns compost or animal-feed advice, including warnings for foods toxic to animals. Offline, the app falls back to a local JSON guide.
 
-```bash
-flutter pub get
-```
+## Model
 
-### 3. Code Generation Çalıştırın
+The detector is a **YOLO11m** model (20M parameters) trained with Ultralytics on Google Colab (NVIDIA A100) on a custom Roboflow dataset of organic kitchen waste.
 
-```bash
-flutter pub run build_runner build --delete-conflicting-outputs
-```
+**Classes (12):** apple, banana, bread, carrot, citrus, cucumber, egg, leafy greens, onion, pepper, potato, tomato
 
-### 4. YOLOv11 Modelini Ekleyin
+**Best validation results** (3,337 images, 10,687 labeled objects):
 
-Eğitilmiş YOLOv11 modelinizi (.tflite) şu konuma yerleştirin:
-```
-assets/models/yolov11.tflite
-```
+| Metric | Value |
+|---|---|
+| mAP@50 | **0.842** |
+| mAP@50-95 | **0.703** |
+| Precision | 0.838 |
+| Recall | 0.759 |
 
-### 5. ESP32-CAM'i Yapılandırın
+The model went through 13 training iterations, starting from YOLOv8n on an 8-class dataset and ending with YOLO11m on the current 12-class dataset, with early stopping (patience 10). It was exported to TFLite for on-device use.
 
-ESP32-CAM'inizin şu endpoint'leri desteklediğinden emin olun:
-- `/capture` - Yüksek çözünürlüklü fotoğraf çekimi
-- `/stream` - Canlı video akışı
+## My Role
 
-### 6. Backend API'yi Yapılandırın (Opsiyonel)
+- Co-trained the YOLO11 model: dataset iterations, training runs and evaluation on Colab
+- Developed the Flutter app: TFLite inference pipeline, ESP32-CAM integration, Gemini advice service and the UI
 
-`lib/core/constants/app_constants.dart` dosyasında backend API URL'inizi güncelleyin:
+## Tech Stack
 
-```dart
-static const String baseApiUrl = 'https://your-backend-api.com/api';
-```
+| Area | Technologies |
+|---|---|
+| Mobile | Flutter, Dart, Riverpod, get_it + injectable, Dio |
+| On-device ML | tflite_flutter, image (letterbox preprocessing) |
+| Model training | Ultralytics YOLO11, Roboflow, Google Colab |
+| LLM | Google Gemini (`google_generative_ai`) |
+| IoT | ESP32-CAM (HTTP image capture and stream) |
+| Architecture | Clean Architecture: data / domain / presentation layers |
 
-### 7. Uygulamayı Çalıştırın
-
-```bash
-flutter run
-```
-
-## 📱 Kullanım
-
-### İlk Kurulum
-1. Uygulamayı açın
-2. Sağ üstteki ESP32 durum göstergesine tıklayın
-3. ESP32-CAM'inizin IP adresini girin (örn: 192.168.1.100)
-4. Bağlantıyı doğrulayın
-
-### Atık Analizi
-1. ESP32-CAM'in atığı görmesini sağlayın
-2. Ortadaki büyük "ANALİZ ET" butonuna basın
-3. Sistem otomatik olarak:
-   - Fotoğraf çeker
-   - AI ile analiz eder
-   - Kompost önerisi getirir
-4. Sonuçları inceleyin ve BioBot ile sohbet edin (online modda)
-
-## 🏛️ Proje Yapısı
+## Project Structure
 
 ```
 lib/
-├── core/
-│   ├── constants/          # Uygulama sabitleri
-│   ├── di/                 # Dependency injection
-│   ├── errors/             # Hata tipleri
-│   └── utils/              # Yardımcı fonksiyonlar
+├── core/            # Constants, dependency injection, error types
 ├── data/
-│   ├── datasources/        # Veri kaynakları
-│   │   ├── esp32_camera_service.dart
-│   │   ├── object_detection_service.dart
-│   │   ├── hybrid_advice_service.dart
-│   │   └── connectivity_service.dart
-│   ├── models/             # Data modelleri
-│   └── repositories/       # Repository implementasyonları
-├── domain/
-│   ├── entities/           # İş varlıkları
-│   ├── repositories/       # Repository arayüzleri
-│   └── usecases/           # İş mantığı
-└── presentation/
-    ├── pages/              # UI sayfaları
-    ├── providers/          # Riverpod provider'lar
-    └── widgets/            # Yeniden kullanılabilir widget'lar
+│   ├── datasources/ # TFLite detection, ESP32-CAM, image picker, Gemini, offline advice
+│   ├── models/
+│   └── repositories/
+├── domain/          # Entities, repository interfaces, use cases
+└── presentation/    # Dashboard, result dialog, Riverpod providers
+assets/
+├── models/best.tflite   # YOLO11m TFLite export
+└── data/waste_guide.json  # Offline advice
 ```
 
-## 🔧 Yapılandırma
+## Getting Started
 
-### ESP32-CAM IP Adresi
-Uygulama içinden ayarlanabilir veya SharedPreferences'ta saklanır.
+**Requirements:** Flutter SDK (Dart 3), an Android device or emulator.
 
-### Waste Class Names
-Yeni atık türleri eklemek için `app_constants.dart` dosyasını düzenleyin:
-
-```dart
-static const Map<int, String> wasteClassNames = {
-  0: 'apple',
-  1: 'banana',
-  // Yeni sınıflar ekleyin...
-};
-```
-
-### Yerel Veri Tabanı
-`assets/data/waste_guide.json` dosyasını düzenleyerek offline mod için veri ekleyin.
-
-## 🎨 UI Tasarımı
-
-### Renk Paleti
-- **Primary**: #00D4AA (Turkuaz)
-- **Background**: #0A0E21 (Koyu Mavi)
-- **Card**: #1D1E33 (Gri-Mavi)
-- **Error**: #EB1555 (Kırmızı)
-
-### Bileşenler
-- **Header**: Logo + Bağlantı durumu göstergeleri
-- **Viewer**: Canlı kamera akışı veya placeholder
-- **FAB**: 72px yuvarlak analiz butonu
-- **Bottom Bar**: Geçmiş ve Galeri butonları
-
-## 🧪 Test
-
-### Unit Tests
 ```bash
-flutter test test/unit/
+flutter pub get
+flutter run
 ```
 
-### Widget Tests
-```bash
-flutter test test/widget/
-```
+**Gemini advice (optional):** set your API key in `lib/core/constants/app_constants.dart` (`geminiApiKey`). Do not commit a real key. Without a key, the app uses the offline advice guide.
 
-### Integration Tests
-```bash
-flutter test integration_test/
-```
+**ESP32-CAM (optional):** the camera must expose `/capture` (JPEG) and `/stream` endpoints over HTTP. Enter its IP address from **IP Settings** in the app. Without an ESP32-CAM, use the **Camera** and **Gallery** buttons.
 
-## 📦 Bağımlılıklar
+## Known Limitations
 
-### Ana Paketler
-- `flutter_riverpod`: State management
-- `tflite_flutter`: AI inference
-- `dio`: HTTP client
-- `connectivity_plus`: Network monitoring
-- `get_it` & `injectable`: Dependency injection
-
-### UI Paketler
-- `cached_network_image`: Görüntü önbellekleme
-- `shimmer`: Loading animasyonları
-
-### Utility Paketler
-- `equatable`: Value equality
-- `dartz`: Functional programming
-- `shared_preferences`: Local storage
-
-## 🔄 Hibrit Zeka Sistemi
-
-### Online Mod (Öncelikli)
-1. Internet bağlantısı kontrol edilir
-2. Backend API'ye istek atılır
-3. Güncel kompost önerisi alınır
-4. BioBot chat aktif edilir
-
-### Offline Mod (Yedek)
-1. API başarısız olursa veya internet yoksa
-2. Yerel JSON dosyasından veri okunur
-3. Temel kompost önerisi gösterilir
-4. Chat özelliği devre dışı kalır
-
-## 🐛 Sorun Giderme
-
-### ESP32-CAM Bağlanamıyor
-- IP adresini kontrol edin
-- ESP32-CAM'in aynı WiFi ağında olduğundan emin olun
-- Firewall ayarlarını kontrol edin
-
-### Model Yüklenemiyor
-- `assets/models/yolov11.tflite` dosyasının var olduğundan emin olun
-- `pubspec.yaml` dosyasında assets tanımlandığından emin olun
-
-### Build Runner Hatası
-```bash
-flutter pub run build_runner clean
-flutter pub run build_runner build --delete-conflicting-outputs
-```
-
-## 📄 Lisans
-
-Bu proje eğitim amaçlı geliştirilmiştir.
-
-## 👨‍💻 Geliştirici
-
-BioCycle AI - IoT & AI Powered Waste Management
+- The model only recognizes the 12 classes above. Other foods (for example mushrooms or pineapple) are not detected.
+- Compost advice is generated for the most confident detection, not for the whole mix.
+- The ESP32-CAM firmware is not part of this repository.
 
 ---
 
-**Not**: Bu uygulama Clean Architecture prensiplerine uygun olarak geliştirilmiştir ve production-ready kod kalitesindedir.
+Developed as an IoT course project at Dokuz Eylül University, Department of Computer Engineering.
